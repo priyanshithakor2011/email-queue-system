@@ -1,4 +1,5 @@
 import { logger } from "@/logger/index.js";
 
-logger.info("email-queue-service v0.0.1 — ready");
-logger.info("All modules loaded successfully");
+logger.error("Module not found");
+logger.error("Failed to fetch");
+logger.error("Please format file");

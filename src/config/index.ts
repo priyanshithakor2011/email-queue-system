@@ -5,6 +5,7 @@ const envSchema = z.object({
     REDIS_URL: z.string().url().default("redis://localhost:6379"),
     AWS_REGION: z.string().default("us-east-1"),
     LOG_LEVEL: z.string().default("info"),
+    ERROR_LOG_FILE: z.string().default("error.log"),
 });
 
 export const config = envSchema.parse(process.env);
