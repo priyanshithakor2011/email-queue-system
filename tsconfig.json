@@ -1,0 +1,32 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "lib": ["ES2022"],
+        "outDir": "dist",
+        "rootDir": "src",
+        "baseUrl": ".",
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+        "forceConsistentCasingInFileNames": true,
+        "skipLibCheck": true,
+        "paths": {
+            "@/api/*": ["./src/api/*"],
+            "@/queue/*": ["./src/queue/*"],
+            "@/worker/*": ["./src/worker/*"],
+            "@/services/*": ["./src/services/*"],
+            "@/retry/*": ["./src/retry/*"],
+            "@/rate-limiter/*": ["./src/rate-limiter/*"],
+            "@/logger/*": ["./src/logger/*"],
+            "@/config/*": ["./src/config/*"],
+            "@/types/*": ["./src/types/*"]
+        }
+    },
+    "include": ["src"],
+    "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}
