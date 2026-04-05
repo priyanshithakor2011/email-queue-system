@@ -4,6 +4,8 @@ export interface Attachment {
     contentType?: string;
 }
 
+export type JobPriority = "critical" | "high" | "normal" | "low";
+
 export interface EmailOptions {
     to: string | string[];
     from?: string;
@@ -12,6 +14,8 @@ export interface EmailOptions {
     text?: string;
     templateId?: string;
     attachments?: Attachment[];
+    priority?: JobPriority;
+    timestamp?: number;
 }
 
 export interface RedisConfig {

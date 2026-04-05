@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import pino from "pino";
-import { config } from "@/config/index.js";
+import { config } from "../config/index.js";
 
 const streams: pino.StreamEntry[] = [
     {
