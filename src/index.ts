@@ -1,8 +1,30 @@
 import { EmailQueueSystem } from "./queue/index.js";
 import { EmailWorker } from "./worker/index.js";
 import { logger } from "./logger/index.js";
+import IORedis from "ioredis";
+import { config } from "./config/index.js";
 
 async function main() {
+    // Check Redis connectivity first
+    const redisCheck = new IORedis(config.REDIS_URL, {
+        maxRetriesPerRequest: 0,
+        connectTimeout: 2000,
+    });
+
+    try {
+        await redisCheck.ping();
+        redisCheck.disconnect();
+        logger.info("Redis connectivity verified.");
+    } catch (err) {
+        logger.error(
+            "CRITICAL: Redis is not reachable at " +
+                config.REDIS_URL +
+                ". " +
+                "Please ensure Redis is running. You can start it with 'docker-compose up -d' if you have Docker.",
+        );
+        process.exit(1);
+    }
+
     const queueSystem = new EmailQueueSystem();
     const workerSystem = new EmailWorker();
 
