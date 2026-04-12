@@ -84,11 +84,19 @@ export class EmailQueueSystem {
         this.events.on("failed", async ({ jobId, failedReason }) => {
             logger.error({ jobId, failedReason }, "Job failed");
 
-            // For DLQ routing, we might need the full job object.
-            // When using QueueEvents, we get jobId. We can fetch the job if needed.
             const job = await Job.fromId(this.queue, jobId);
-            if (job && job.attemptsMade >= (job.opts.attempts || 1)) {
-                logger.warn({ jobId: job.id }, "Job exhausted retries. Moving to DLQ.");
+
+            // Move to DLQ if:
+            // 1. Job is marked as unrecoverable (UnrecoverableError)
+            // 2. OR job has exhausted all retry attempts
+            const isUnrecoverable = failedReason?.includes("UnrecoverableError");
+            const hasExhaustedRetries = job && job.attemptsMade >= (job.opts.attempts || 1);
+
+            if (job && (isUnrecoverable || hasExhaustedRetries)) {
+                logger.warn(
+                    { jobId: job.id, isUnrecoverable, hasExhaustedRetries },
+                    "Moving job to DLQ.",
+                );
                 await this.dlq.add(job.name, job.data, {
                     jobId: `dlq-${job.id}`,
                 });

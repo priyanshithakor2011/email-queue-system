@@ -74,7 +74,7 @@ describe("emailProcessor", () => {
 
     it("should throw error and log it if SES fails", async () => {
         const error = new Error("SES Failed");
-        (error as any).category = "permanent";
+        (error as any).category = "retryable";
         mockSendEmail.mockRejectedValue(error);
 
         const mockJob = {
@@ -86,5 +86,22 @@ describe("emailProcessor", () => {
         } as unknown as Job;
 
         await expect(emailProcessor(mockJob)).rejects.toThrow("SES Failed");
+    });
+
+    it("should throw UnrecoverableError if SES failure is permanent", async () => {
+        const { UnrecoverableError } = await import("bullmq");
+        const error = new Error("Template does not exist");
+        (error as any).category = "permanent";
+        mockSendEmail.mockRejectedValue(error);
+
+        const mockJob = {
+            id: "job-4",
+            data: {
+                to: "x@y.com",
+                subject: "Permanent Fail",
+            },
+        } as unknown as Job;
+
+        await expect(emailProcessor(mockJob)).rejects.toThrow(UnrecoverableError);
     });
 });
