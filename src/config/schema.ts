@@ -28,6 +28,7 @@ export const queueConfigSchema = z.object({
         .positive()
         .min(1)
         .default(DEFAULT_CONFIG.rateLimitPerSecond!),
+    ratePerDay: z.number().int().positive().min(1).default(DEFAULT_CONFIG.ratePerDay!),
     maxRetries: z.number().int().nonnegative().default(DEFAULT_CONFIG.maxRetries!),
     logLevel: logLevelSchema,
 });

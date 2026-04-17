@@ -3,6 +3,7 @@ import { QueueConfig } from "../types/index.js";
 export const DEFAULT_CONFIG: Partial<QueueConfig> = {
     maxRetries: 3,
     rateLimitPerSecond: 14,
+    ratePerDay: 50000,
     logLevel: "info",
     redis: {
         host: "localhost",

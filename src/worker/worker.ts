@@ -1,15 +1,18 @@
-import { Worker, Job } from "bullmq";
+import { Worker, Job, UnrecoverableError } from "bullmq";
 import IORedis from "ioredis";
 import { EmailOptions, QueueConfig } from "../types/index.js";
 import { init } from "../config/schema.js";
 import { logger } from "../logger/index.js";
 import { emailProcessor } from "./processor.js";
+import { TokenBucket } from "../rate-limiter/index.js";
+import { calculateBackoff } from "../retry/index.js";
 
 export class EmailWorker {
     private worker: Worker;
     private connection: IORedis;
     private config: QueueConfig;
     private queueName = "email-queue";
+    private tokenBucket: TokenBucket;
 
     constructor(initialConfig: Partial<QueueConfig> = {}, concurrency: number = 5) {
         this.config = init(initialConfig);
@@ -30,14 +33,36 @@ export class EmailWorker {
             });
         }
 
-        this.worker = new Worker<EmailOptions>(this.queueName, emailProcessor, {
-            connection: this.connection,
-            concurrency,
-            limiter: {
-                max: this.config.rateLimitPerSecond,
-                duration: 1000,
-            },
+        this.tokenBucket = new TokenBucket({
+            redis: this.connection,
+            keyPrefix: "ses-ratelimit",
+            ratePerSecond: this.config.rateLimitPerSecond,
+            ratePerDay: this.config.ratePerDay,
         });
+
+        this.worker = new Worker<EmailOptions>(
+            this.queueName,
+            async (job) => {
+                // Rate Limiting (Token Bucket)
+                const canProceed = await this.tokenBucket.consume();
+                if (!canProceed) {
+                    // If rate limited (especially daily limit), throw a retryable error
+                    // Default backoff will wait before trying again
+                    throw new Error("Rate limit exceeded (Global Quota)");
+                }
+
+                return emailProcessor(job);
+            },
+            {
+                connection: this.connection,
+                concurrency,
+                settings: {
+                    backoffStrategy: (attempts, _type, _err, _job) => {
+                        return calculateBackoff(attempts, 1000); // 1s base delay
+                    },
+                },
+            },
+        );
 
         this.setupLifecycleHooks();
         this.setupGracefulShutdown();

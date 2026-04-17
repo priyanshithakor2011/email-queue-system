@@ -37,6 +37,7 @@ export interface QueueConfig {
     redis: RedisConfig;
     ses: SESConfig;
     rateLimitPerSecond: number;
+    ratePerDay: number;
     maxRetries: number;
     logLevel: LogLevel;
 }
