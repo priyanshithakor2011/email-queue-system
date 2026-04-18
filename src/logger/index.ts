@@ -25,10 +25,18 @@ if (config.ERROR_LOG_FILE) {
     });
 }
 
-export const logger = pino(
+let activeLogger = pino(
     {
         level: (config.LOG_LEVEL as pino.Level) || "info",
         timestamp: pino.stdTimeFunctions.isoTime,
     },
     pino.multistream(streams),
 );
+
+export const setLogger = (customLogger: pino.BaseLogger) => {
+    activeLogger = customLogger as pino.Logger;
+};
+
+export const logger = new Proxy({} as pino.Logger, {
+    get: (_, prop) => (activeLogger as any)[prop],
+});

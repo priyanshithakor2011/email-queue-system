@@ -55,7 +55,10 @@ export class TokenBucket {
             }
 
             if (secCount > this.ratePerSecond) {
-                // Silently return false, as this is a transient local rate limit
+                logger.debug(
+                    { secCount, limit: this.ratePerSecond, key: secondKey },
+                    "Rate limit reached (per-second).",
+                );
                 return false;
             }
 

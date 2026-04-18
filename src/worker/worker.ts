@@ -70,15 +70,46 @@ export class EmailWorker {
 
     private setupLifecycleHooks() {
         this.worker.on("active", (job: Job) => {
-            logger.info({ jobId: job.id, name: job.name }, "Worker: Job became active");
+            const correlationId = job.data?.correlationId;
+            logger.info(
+                {
+                    jobId: job.id,
+                    correlationId,
+                    name: job.name,
+                    pickedUpAt: new Date().toISOString(),
+                },
+                "Worker: Job became active",
+            );
         });
 
         this.worker.on("completed", (job: Job, result: any) => {
-            logger.info({ jobId: job.id, result }, "Worker: Job completed");
+            const correlationId = job.data?.correlationId;
+            const latency =
+                job.finishedOn && job.processedOn ? job.finishedOn - job.processedOn : "unknown";
+
+            logger.info(
+                {
+                    jobId: job.id,
+                    correlationId,
+                    latencyMs: latency,
+                    completedAt: new Date().toISOString(),
+                    result,
+                },
+                "Worker: Job completed",
+            );
         });
 
         this.worker.on("failed", (job: Job | undefined, err: Error) => {
-            logger.error({ jobId: job?.id, error: err.message }, "Worker: Job failed");
+            const correlationId = job?.data?.correlationId;
+            logger.error(
+                {
+                    jobId: job?.id,
+                    correlationId,
+                    error: err.message,
+                    attemptsMade: job?.attemptsMade,
+                },
+                "Worker: Job failed",
+            );
         });
 
         this.worker.on("error", (err: Error) => {

@@ -48,6 +48,7 @@ export const emailOptionsSchema = z
         text: z.string().optional(),
         templateId: z.string().optional(),
         attachments: z.array(attachmentSchema).optional(),
+        correlationId: z.string().optional(),
     })
     .refine((data) => data.html || data.text || data.templateId, {
         message: "At least one of html, text, or templateId must be provided.",

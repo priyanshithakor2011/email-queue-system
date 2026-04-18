@@ -16,6 +16,7 @@ export interface EmailOptions {
     attachments?: Attachment[];
     priority?: JobPriority;
     timestamp?: number;
+    correlationId?: string;
 }
 
 export interface RedisConfig {
@@ -40,6 +41,7 @@ export interface QueueConfig {
     ratePerDay: number;
     maxRetries: number;
     logLevel: LogLevel;
+    logger?: any; // Allow custom pino logger instance
 }
 
 export type JobStatus = "queued" | "processing" | "completed" | "failed";
