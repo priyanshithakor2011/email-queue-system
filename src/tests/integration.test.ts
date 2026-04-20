@@ -112,4 +112,77 @@ describe("End-to-End Integration Flow", () => {
         expect(dlqJob).toBeDefined();
         expect(dlqJob?.id).toBe(dlqJobId);
     });
+
+    it("should retry transient errors and succeed eventually", async () => {
+        // First 2 calls fail with Throttling, 3rd call succeeds
+        mockSESClient.send
+            .mockRejectedValueOnce({ name: "Throttling", message: "Slow down" })
+            .mockRejectedValueOnce({ name: "Throttling", message: "Slow down" })
+            .mockResolvedValueOnce({ MessageId: "success-after-retry" });
+
+        const testEmail = {
+            to: "retry@example.com",
+            subject: "Retry Test",
+            text: "Testing backoff",
+        };
+
+        const job = await queueSystem.addEmailJob(testEmail);
+
+        // Wait for completion (might take a few seconds due to backoff)
+        let status = await job.getState();
+        const timeout = 10000; // Longer timeout for retries
+        const start = Date.now();
+
+        while (status !== "completed" && Date.now() - start < timeout) {
+            await new Promise((r) => setTimeout(r, 500));
+            status = await job.getState();
+        }
+
+        expect(status).toBe("completed");
+        expect(mockSESClient.send).toHaveBeenCalledTimes(3);
+
+        const res = await job.returnvalue;
+        expect(res.messageId).toBe("success-after-retry");
+    });
+
+    it("should enforce rate limiting throughput", async () => {
+        // Mock all sends to be fast
+        mockSESClient.mockSuccess("bulk-id");
+
+        const count = 20;
+        const rateLimit = 14; // Default is 14/sec
+
+        const jobs = [];
+        for (let i = 0; i < count; i++) {
+            jobs.push(
+                queueSystem.addEmailJob({
+                    to: `user${i}@example.com`,
+                    subject: `Rate Test ${i}`,
+                    text: "Testing throughput",
+                }),
+            );
+        }
+
+        const createdJobs = await Promise.all(jobs);
+        const startTime = Date.now();
+
+        // Wait for all to complete
+        let completedCount = 0;
+        while (completedCount < count && Date.now() - startTime < 10000) {
+            completedCount = 0;
+            for (const job of createdJobs) {
+                if (await job.isCompleted()) completedCount++;
+            }
+            if (completedCount < count) await new Promise((r) => setTimeout(r, 200));
+        }
+
+        const endTime = Date.now();
+        const durationSeconds = (endTime - startTime) / 1000;
+
+        expect(completedCount).toBe(count);
+        // If we processed 20 jobs at 14/sec, it should take at least 20/14 ≈ 1.42s
+        // We add some buffer for overhead, but it definitely shouldn't be under 1s
+        logger.info({ durationSeconds, count }, "Rate limit test completed");
+        expect(durationSeconds).toBeGreaterThan(1);
+    });
 });
